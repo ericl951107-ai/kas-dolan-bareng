@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FiUser, FiMail, FiCalendar, FiDollarSign, FiSearch, FiAward } from 'react-icons/fi'
 import api from '../utils/api'
-import { formatCurrency, formatDate } from '../utils/formatters'
+import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
 export default function Members() {
@@ -17,8 +17,10 @@ export default function Members() {
   const loadMembers = async () => {
     try {
       const response = await api.get('/members')
+      console.log('Members data:', response.data)
       setMembers(response.data)
     } catch (error) {
+      console.error('Load members error:', error)
       toast.error('Gagal memuat data anggota')
     } finally {
       setLoading(false)
@@ -26,10 +28,25 @@ export default function Members() {
   }
 
   const filteredMembers = members.filter(member =>
-    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.nickname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+    member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.nickname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString) return 'Tidak tersedia'
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Tidak tersedia'
+      return date.toLocaleDateString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch (error) {
+      return 'Tidak tersedia'
+    }
+  }
 
   if (loading) {
     return (
@@ -41,17 +58,15 @@ export default function Members() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Anggota
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Daftar semua anggota kas
+          Daftar semua anggota kas ({members.length} anggota)
         </p>
       </div>
 
-      {/* Search */}
       <div className="card">
         <div className="relative">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -65,15 +80,12 @@ export default function Members() {
         </div>
       </div>
 
-      {/* Members Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredMembers.map((member, index) => (
-          <Link
+          <div
             key={member.id}
-            to={`/members/${member.id}`}
-            className="card hover:shadow-lg transition-shadow"
+            className="card hover:shadow-lg transition-shadow relative"
           >
-            {/* Member Rank Badge */}
             {index < 3 && (
               <div className="absolute top-4 right-4">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -91,7 +103,6 @@ export default function Members() {
             )}
 
             <div className="flex items-start gap-4">
-              {/* Avatar */}
               {member.avatar ? (
                 <img
                   src={member.avatar}
@@ -109,15 +120,14 @@ export default function Members() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   @{member.nickname}
                 </p>
-                
-                {/* Status Badge */}
+
                 <div className="mt-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    member.paymentStatus === 'paid'
+                    member.payment_status === 'paid'
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                       : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   }`}>
-                    {member.paymentStatus === 'paid' ? 'Sudah Bayar' : 'Belum Bayar'}
+                    {member.payment_status === 'paid' ? 'Sudah Bayar' : 'Belum Bayar'}
                   </span>
                 </div>
               </div>
@@ -130,14 +140,14 @@ export default function Members() {
               </div>
               <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                 <FiCalendar className="w-4 h-4" />
-                <span>Bergabung {formatDate(member.joinedAt)}</span>
+                <span>Bergabung {formatDate(member.joined_at)}</span>
               </div>
               <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium">
                 <FiDollarSign className="w-4 h-4" />
-                <span>Total: {formatCurrency(member.totalContribution)}</span>
+                <span>Total: {formatCurrency(parseFloat(member.total_contribution) || 0)}</span>
               </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 
