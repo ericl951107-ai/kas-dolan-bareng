@@ -10,7 +10,6 @@ router.post('/register', async (req, res) => {
   try {
     const { name, nickname, email, password } = req.body
 
-    // Check if user exists
     const userExists = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
@@ -20,13 +19,11 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email sudah terdaftar' })
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Insert user
     const result = await pool.query(
-      `INSERT INTO users (name, nickname, email, password, role, joined_at) 
-       VALUES ($1, $2, $3, $4, $5, NOW()) 
+      `INSERT INTO users (name, nickname, email, password, role, joined_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING id, name, nickname, email, role, joined_at`,
       [name, nickname, email, hashedPassword, 'member']
     )
@@ -36,7 +33,7 @@ router.post('/register', async (req, res) => {
       user: result.rows[0]
     })
   } catch (error) {
-    console.error(error)
+    console.error('Register error:', error)
     res.status(500).json({ message: 'Server error' })
   }
 })
@@ -46,33 +43,34 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body
 
-    // Find user
+    console.log('Login attempt:', email)
+
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
     )
 
     if (result.rows.length === 0) {
+      console.log('User not found')
       return res.status(401).json({ message: 'Email atau password salah' })
     }
 
     const user = result.rows[0]
+    console.log('User found, checking password...')
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password)
+    console.log('Password match:', isMatch)
 
     if (!isMatch) {
       return res.status(401).json({ message: 'Email atau password salah' })
     }
 
-    // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     )
 
-    // Remove password from response
     delete user.password
 
     res.json({
@@ -90,7 +88,7 @@ router.post('/login', async (req, res) => {
       token
     })
   } catch (error) {
-    console.error(error)
+    console.error('Login error:', error)
     res.status(500).json({ message: 'Server error' })
   }
 })
