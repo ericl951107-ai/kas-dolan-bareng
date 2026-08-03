@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 function Settings() {
   const navigate = useNavigate();
@@ -29,14 +28,11 @@ function Settings() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/settings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/settings');
       setSettings(response.data);
     } catch (error) {
       console.error('Error fetching settings:', error);
-      setMessage({ type: 'error', text: 'Gagal memuat pengaturan' });
+      toast.error('Gagal memuat pengaturan');
     } finally {
       setLoading(false);
     }
@@ -49,11 +45,9 @@ function Settings() {
       setSaving(true);
       setMessage({ type: '', text: '' });
       
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/settings`, settings, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put('/settings', settings);
       
+      toast.success('Pengaturan berhasil disimpan!');
       setMessage({ type: 'success', text: 'Pengaturan berhasil disimpan!' });
       
       // Clear message after 3 seconds
@@ -62,10 +56,9 @@ function Settings() {
       }, 3000);
     } catch (error) {
       console.error('Error saving settings:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || 'Gagal menyimpan pengaturan' 
-      });
+      const errorMsg = error.response?.data?.message || 'Gagal menyimpan pengaturan';
+      toast.error(errorMsg);
+      setMessage({ type: 'error', text: errorMsg });
     } finally {
       setSaving(false);
     }

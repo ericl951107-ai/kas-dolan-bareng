@@ -75,10 +75,7 @@ export default function Members() {
   const handleEditSubmit = async (e) => {
     e.preventDefault()
     try {
-      const token = localStorage.getItem('token')
-      await api.put(`/users/${selectedMember.id}`, editForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.put(`/users/${selectedMember.id}`, editForm)
       toast.success('Anggota berhasil diperbarui')
       setShowEditModal(false)
       loadMembers()
@@ -90,10 +87,7 @@ export default function Members() {
 
   const handleDeleteConfirm = async () => {
     try {
-      const token = localStorage.getItem('token')
-      await api.delete(`/users/${selectedMember.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.delete(`/users/${selectedMember.id}`)
       toast.success('Anggota berhasil dihapus')
       setShowDeleteModal(false)
       loadMembers()
