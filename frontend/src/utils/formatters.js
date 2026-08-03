@@ -11,18 +11,42 @@ export const formatCurrency = (amount) => {
 }
 
 export const formatDate = (date, formatStr = 'dd MMMM yyyy') => {
-  return format(new Date(date), formatStr, { locale: id })
+  if (!date) return '-'
+  try {
+    const dateObj = new Date(date)
+    if (isNaN(dateObj.getTime())) return '-'
+    return format(dateObj, formatStr, { locale: id })
+  } catch (error) {
+    console.error('Error formatting date:', error)
+    return '-'
+  }
 }
 
 export const formatDateTime = (date) => {
-  return format(new Date(date), 'dd MMM yyyy, HH:mm', { locale: id })
+  if (!date) return '-'
+  try {
+    const dateObj = new Date(date)
+    if (isNaN(dateObj.getTime())) return '-'
+    return format(dateObj, 'dd MMM yyyy, HH:mm', { locale: id })
+  } catch (error) {
+    console.error('Error formatting datetime:', error)
+    return '-'
+  }
 }
 
 export const formatRelativeTime = (date) => {
-  return formatDistanceToNow(new Date(date), { 
-    addSuffix: true,
-    locale: id 
-  })
+  if (!date) return '-'
+  try {
+    const dateObj = new Date(date)
+    if (isNaN(dateObj.getTime())) return '-'
+    return formatDistanceToNow(dateObj, { 
+      addSuffix: true,
+      locale: id 
+    })
+  } catch (error) {
+    console.error('Error formatting relative time:', error)
+    return '-'
+  }
 }
 
 export const formatNumber = (num) => {
