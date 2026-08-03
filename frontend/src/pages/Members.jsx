@@ -4,21 +4,19 @@ import { FiUser, FiMail, FiCalendar, FiDollarSign, FiSearch, FiAward, FiEdit, Fi
 import api from '../utils/api'
 import { formatCurrency } from '../utils/formatters'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '../store/authStore'
 
 export default function Members() {
   const [members, setMembers] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState(null)
+  const { user: currentUser } = useAuthStore()
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', nickname: '', email: '', role: 'member' })
 
   useEffect(() => {
-    // Get current user to check if admin
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    setCurrentUser(user)
     loadMembers()
   }, [])
 

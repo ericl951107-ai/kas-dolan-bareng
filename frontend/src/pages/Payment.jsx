@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { FiDollarSign, FiCreditCard, FiDownload, FiCheck } from 'react-icons/fi'
 import { QRCodeSVG } from 'qrcode.react'
 import html2canvas from 'html2canvas'
@@ -15,6 +15,29 @@ export default function Payment() {
   const [paymentMethod, setPaymentMethod] = useState('qris')
   const [qrData, setQrData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [bankSettings, setBankSettings] = useState({
+    bank_name: 'BCA',
+    bank_account_number: '1234567890',
+    account_holder_name: 'Bendahara Kas'
+  })
+
+  useEffect(() => {
+    fetchBankSettings()
+  }, [])
+
+  const fetchBankSettings = async () => {
+    try {
+      const response = await api.get('/settings')
+      setBankSettings({
+        bank_name: response.data.bank_name || 'BCA',
+        bank_account_number: response.data.bank_account_number || '1234567890',
+        account_holder_name: response.data.account_holder_name || 'Bendahara Kas'
+      })
+    } catch (error) {
+      console.error('Failed to fetch bank settings:', error)
+      // Use default values if fetch fails
+    }
+  }
 
   const handleGenerateQR = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -280,17 +303,17 @@ export default function Payment() {
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-sm text-gray-600 dark:text-gray-400">Bank</p>
-              <p className="font-semibold text-lg">BCA</p>
+              <p className="font-semibold text-lg">{bankSettings.bank_name}</p>
             </div>
             
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-sm text-gray-600 dark:text-gray-400">Nomor Rekening</p>
-              <p className="font-semibold text-lg">1234567890</p>
+              <p className="font-semibold text-lg">{bankSettings.bank_account_number}</p>
             </div>
             
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-sm text-gray-600 dark:text-gray-400">Atas Nama</p>
-              <p className="font-semibold text-lg">Bendahara Kas</p>
+              <p className="font-semibold text-lg">{bankSettings.account_holder_name}</p>
             </div>
 
             <div className="p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
