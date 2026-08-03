@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 
 function Settings() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -16,14 +18,13 @@ function Settings() {
 
   useEffect(() => {
     // Check if user is admin
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       navigate('/');
       return;
     }
 
     fetchSettings();
-  }, [navigate]);
+  }, [navigate, user]);
 
   const fetchSettings = async () => {
     try {
