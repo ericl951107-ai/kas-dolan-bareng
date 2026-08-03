@@ -25,13 +25,7 @@ export default function Login() {
       toast.success('Login berhasil!')
       navigate('/')
     } catch (error) {
-      const data = error.response?.data
-      if (data?.needVerification) {
-        toast.error('Email belum diverifikasi. Kode telah dikirim ulang.')
-        navigate('/verify-email', { state: { email: formData.email } })
-      } else {
-        toast.error(data?.message || 'Login gagal')
-      }
+      toast.error(error.response?.data?.message || 'Login gagal')
     } finally {
       setLoading(false)
     }

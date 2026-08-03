@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FiMail, FiLock, FiUser, FiDollarSign } from 'react-icons/fi'
+import { useAuthStore } from '../store/authStore'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 
 export default function Register() {
   const navigate = useNavigate()
+  const { login } = useAuthStore()
   const [formData, setFormData] = useState({
     name: '',
     nickname: '',
@@ -32,16 +34,12 @@ export default function Register() {
         password: formData.password,
       })
       
-      toast.success('Kode verifikasi dikirim ke email Anda!')
-      // Redirect to verify page with email
-      navigate('/verify-email', { state: { email: formData.email } })
+      // Auto login setelah register
+      login(response.data.user, response.data.token)
+      toast.success('Pendaftaran berhasil! Selamat datang 🎉')
+      navigate('/')
     } catch (error) {
-      const data = error.response?.data
-      if (data?.needVerification) {
-        navigate('/verify-email', { state: { email: formData.email } })
-      } else {
-        toast.error(data?.message || 'Pendaftaran gagal')
-      }
+      toast.error(error.response?.data?.message || 'Pendaftaran gagal')
     } finally {
       setLoading(false)
     }
