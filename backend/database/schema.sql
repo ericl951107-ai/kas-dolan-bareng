@@ -70,6 +70,15 @@ CREATE TABLE activity_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Settings table
+CREATE TABLE settings (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(255) UNIQUE NOT NULL,
+    value TEXT,
+    description TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX idx_transactions_type ON transactions(type);
@@ -106,3 +115,9 @@ INSERT INTO users (name, nickname, email, password, role, total_contribution) VA
 ('Budi Santoso', 'Budi', 'budi@email.com', '$2a$10$8ZJ5qJ5qJ5qJ5qJ5qJ5qJOK5X5X5X5X5X5X5X5X5X5X5X5X5X5X5X', 'member', 500000),
 ('Siti Nurhaliza', 'Siti', 'siti@email.com', '$2a$10$8ZJ5qJ5qJ5qJ5qJ5qJ5qJOK5X5X5X5X5X5X5X5X5X5X5X5X5X5X5X', 'member', 350000),
 ('Ahmad Fauzan', 'Fauzan', 'fauzan@email.com', '$2a$10$8ZJ5qJ5qJ5qJ5qJ5qJ5qJOK5X5X5X5X5X5X5X5X5X5X5X5X5X5X5X', 'bendahara', 600000);
+
+-- Insert default settings
+INSERT INTO settings (key, value, description) VALUES
+('bank_account_number', '1234567890', 'Nomor rekening untuk pembayaran'),
+('bank_name', 'Bank BCA', 'Nama bank'),
+('account_holder_name', 'Kas Dolan Bareng', 'Nama pemilik rekening');

@@ -1,118 +1,177 @@
-import { useState } from 'react'
-import { FiShare2, FiCopy, FiCheck } from 'react-icons/fi'
-import toast from 'react-hot-toast'
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-export default function Settings() {
-  const [copied, setCopied] = useState(false)
-  const groupLink = `${window.location.origin}/join/ABC123`
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(groupLink)
-    setCopied(true)
-    toast.success('Link berhasil disalin')
-    setTimeout(() => setCopied(false), 2000)
-  }
+function Settings() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState({
+    bank_account_number: '',
+    bank_name: '',
+    account_holder_name: ''
+  });
+  const [message, setMessage] = useState({ type: '', text: '' });
 
-  const handleShareLink = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Kas Dolan Bareng',
-          text: 'Bergabung dengan grup kas kami!',
-          url: groupLink,
-        })
-      } catch (error) {
-        console.log('Share cancelled')
-      }
-    } else {
-      handleCopyLink()
+  useEffect(() => {
+    // Check if user is admin
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role !== 'admin') {
+      navigate('/');
+      return;
     }
+
+    fetchSettings();
+  }, [navigate]);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      setMessage({ type: 'error', text: 'Gagal memuat pengaturan' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setSaving(true);
+      setMessage({ type: '', text: '' });
+      
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/settings`, settings, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'Pengaturan berhasil disimpan!' });
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        setMessage({ type: '', text: '' });
+      }, 3000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Gagal menyimpan pengaturan' 
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    setSettings({
+      ...settings,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Pengaturan
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Kelola pengaturan grup kas
-        </p>
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Pengaturan</h1>
+        <p className="text-gray-600">Kelola informasi rekening bank untuk pembayaran</p>
       </div>
 
-      {/* Share Group Link */}
-      <div className="card">
-        <h3 className="text-lg font-semibold mb-4">Undang Anggota Baru</h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Bagikan link ini untuk mengundang anggota baru ke grup kas
-        </p>
-        
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={groupLink}
-            readOnly
-            className="input-field flex-1"
-          />
-          <button
-            onClick={handleCopyLink}
-            className="btn-secondary flex items-center gap-2"
-          >
-            {copied ? <FiCheck /> : <FiCopy />}
-            {copied ? 'Tersalin' : 'Salin'}
-          </button>
-          <button
-            onClick={handleShareLink}
-            className="btn-primary flex items-center gap-2"
-          >
-            <FiShare2 />
-            Bagikan
-          </button>
+      {message.text && (
+        <div className={`mb-6 p-4 rounded-lg ${
+          message.type === 'success' 
+            ? 'bg-green-50 border border-green-200 text-green-800' 
+            : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {message.text}
         </div>
-      </div>
+      )}
 
-      {/* Group Info */}
-      <div className="card">
-        <h3 className="text-lg font-semibold mb-4">Informasi Grup</h3>
-        <div className="space-y-3">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Informasi Rekening Bank</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Nama Grup</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nama Bank
+            </label>
             <input
               type="text"
-              defaultValue="Kas Dolan Bareng"
-              className="input-field"
+              name="bank_name"
+              value={settings.bank_name}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Contoh: Bank BCA"
+              required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Deskripsi</label>
-            <textarea
-              defaultValue="Grup kas untuk kegiatan bersama"
-              className="input-field resize-none"
-              rows="3"
-            />
-          </div>
-          <button className="btn-primary">Simpan Perubahan</button>
-        </div>
-      </div>
 
-      {/* Notifications */}
-      <div className="card">
-        <h3 className="text-lg font-semibold mb-4">Notifikasi</h3>
-        <div className="space-y-3">
-          <label className="flex items-center justify-between">
-            <span>Pembayaran Baru</span>
-            <input type="checkbox" defaultChecked className="w-5 h-5" />
-          </label>
-          <label className="flex items-center justify-between">
-            <span>Pengeluaran Baru</span>
-            <input type="checkbox" defaultChecked className="w-5 h-5" />
-          </label>
-          <label className="flex items-center justify-between">
-            <span>Anggota Baru</span>
-            <input type="checkbox" defaultChecked className="w-5 h-5" />
-          </label>
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nomor Rekening
+            </label>
+            <input
+              type="text"
+              name="bank_account_number"
+              value={settings.bank_account_number}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Contoh: 1234567890"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nama Pemilik Rekening
+            </label>
+            <input
+              type="text"
+              name="account_holder_name"
+              value={settings.account_holder_name}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Contoh: Kas Dolan Bareng"
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Batal
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-  )
+  );
 }
+
+export default Settings;

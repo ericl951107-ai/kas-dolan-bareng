@@ -9,6 +9,7 @@ import paymentRoutes from './routes/payments.js'
 import expenseRoutes from './routes/expenses.js'
 import dashboardRoutes from './routes/dashboard.js'
 import statisticsRoutes from './routes/statistics.js'
+import settingsRoutes from './routes/settings.js'
 
 dotenv.config()
 
@@ -36,6 +37,7 @@ app.use('/api/payments', paymentRoutes)
 app.use('/api/expenses', expenseRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/statistics', statisticsRoutes)
+app.use('/api/settings', settingsRoutes)
 
 // Health check
 app.get('/health', (req, res) => {

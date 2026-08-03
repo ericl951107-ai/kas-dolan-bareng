@@ -3,6 +3,7 @@ import {
   FiHome, FiUsers, FiDollarSign, FiClock, 
   FiTrendingDown, FiBarChart2, FiSettings, FiX 
 } from 'react-icons/fi'
+import { useAuthStore } from '../store/authStore'
 
 const menuItems = [
   { path: '/', icon: FiHome, label: 'Beranda' },
@@ -11,10 +12,16 @@ const menuItems = [
   { path: '/history', icon: FiClock, label: 'Riwayat' },
   { path: '/expenses', icon: FiTrendingDown, label: 'Pengeluaran' },
   { path: '/statistics', icon: FiBarChart2, label: 'Statistik' },
-  { path: '/settings', icon: FiSettings, label: 'Pengaturan' },
+]
+
+const adminMenuItems = [
+  { path: '/settings', icon: FiSettings, label: 'Pengaturan', adminOnly: true },
 ]
 
 export default function Sidebar({ isOpen, onClose }) {
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'admin'
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -77,6 +84,36 @@ export default function Sidebar({ isOpen, onClose }) {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+
+            {/* Admin Only Menu */}
+            {isAdmin && (
+              <>
+                <div className="pt-4 pb-2">
+                  <div className="px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Admin
+                  </div>
+                </div>
+                {adminMenuItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => {
+                      if (window.innerWidth < 768) onClose()
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                        isActive
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </>
+            )}
           </nav>
 
           {/* Footer */}
