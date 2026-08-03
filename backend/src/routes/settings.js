@@ -8,6 +8,35 @@ const router = express.Router();
 // Get all settings
 router.get('/', auth, async (req, res) => {
   try {
+    // Check if settings table exists, if not create it
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'settings'
+      )
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      // Create settings table
+      await pool.query(`
+        CREATE TABLE settings (
+          id SERIAL PRIMARY KEY,
+          key VARCHAR(255) UNIQUE NOT NULL,
+          value TEXT,
+          description TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // Insert default values
+      await pool.query(`
+        INSERT INTO settings (key, value, description) VALUES
+        ('bank_account_number', '1234567890', 'Nomor rekening untuk pembayaran'),
+        ('bank_name', 'Bank BCA', 'Nama bank'),
+        ('account_holder_name', 'Kas Dolan Bareng', 'Nama pemilik rekening')
+      `);
+    }
+    
     const result = await pool.query('SELECT * FROM settings');
     
     // Convert to key-value object
