@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FiUser, FiMail, FiCalendar, FiDollarSign, FiSearch, FiAward, FiEdit, FiTrash2, FiX } from 'react-icons/fi'
 import api from '../utils/api'
-import { formatCurrency } from '../utils/formatters'
+import { formatCurrency, formatDateTime } from '../utils/formatters'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
 
@@ -13,7 +13,10 @@ export default function Members() {
   const { user: currentUser } = useAuthStore()
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showContributionModal, setShowContributionModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
+  const [memberTransactions, setMemberTransactions] = useState([])
+  const [loadingTransactions, setLoadingTransactions] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', nickname: '', email: '', role: 'member' })
 
   useEffect(() => {
@@ -92,6 +95,24 @@ export default function Members() {
     } catch (error) {
       console.error('Delete member error:', error)
       toast.error(error.response?.data?.message || 'Gagal menghapus anggota')
+    }
+  }
+
+  const handleShowContributions = async (member) => {
+    setSelectedMember(member)
+    setShowContributionModal(true)
+    setLoadingTransactions(true)
+    
+    try {
+      // Fetch member's transactions
+      const response = await api.get(`/transactions?userId=${member.id}&type=income`)
+      setMemberTransactions(response.data)
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+      toast.error('Gagal memuat riwayat kontribusi')
+      setMemberTransactions([])
+    } finally {
+      setLoadingTransactions(false)
     }
   }
 
@@ -195,6 +216,16 @@ export default function Members() {
                 <FiDollarSign className="w-4 h-4" />
                 <span>Total: {formatCurrency(parseFloat(member.total_contribution) || 0)}</span>
               </div>
+            </div>
+
+            {/* View Contributions Button */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => handleShowContributions(member)}
+                className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
+              >
+                Lihat Detail Kontribusi
+              </button>
             </div>
 
             {isAdmin && (
@@ -349,6 +380,97 @@ export default function Members() {
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
               >
                 Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contribution Detail Modal */}
+      {showContributionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold">Detail Kontribusi</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {selectedMember?.name} (@{selectedMember?.nickname})
+                </p>
+              </div>
+              <button
+                onClick={() => setShowContributionModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Total Contribution Summary */}
+            <div className="mb-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Kontribusi</p>
+              <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                {formatCurrency(parseFloat(selectedMember?.total_contribution) || 0)}
+              </p>
+            </div>
+
+            {/* Transactions List */}
+            <div>
+              <h3 className="font-semibold mb-3">Riwayat Transaksi</h3>
+              
+              {loadingTransactions ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Memuat...</p>
+                </div>
+              ) : memberTransactions.length > 0 ? (
+                <div className="space-y-3">
+                  {memberTransactions.map((transaction) => (
+                    <div 
+                      key={transaction.id}
+                      className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-medium">{transaction.description || 'Iuran Kas'}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {formatDateTime(transaction.created_at)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                          {transaction.method === 'transfer' ? 'Transfer Bank' : 
+                           transaction.method === 'qris' ? 'QRIS' : 
+                           transaction.method === 'cash' ? 'Tunai' : transaction.method}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(parseFloat(transaction.amount))}
+                        </p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          transaction.status === 'completed'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : transaction.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          {transaction.status === 'completed' ? 'Selesai' : 
+                           transaction.status === 'pending' ? 'Pending' : 'Gagal'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">Belum ada transaksi</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={() => setShowContributionModal(false)}
+                className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Tutup
               </button>
             </div>
           </div>

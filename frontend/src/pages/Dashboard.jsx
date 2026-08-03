@@ -21,6 +21,7 @@ export default function Dashboard() {
     totalIncome: 0,
     totalExpenses: 0,
   })
+  const [targetAmount, setTargetAmount] = useState(0)
   const [recentTransactions, setRecentTransactions] = useState([])
   const [chartData, setChartData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -31,21 +32,27 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [statsRes, transactionsRes, chartRes] = await Promise.all([
+      const [statsRes, transactionsRes, chartRes, settingsRes] = await Promise.all([
         api.get('/dashboard/stats'),
         api.get('/transactions/recent?limit=5'),
         api.get('/dashboard/chart-data'),
+        api.get('/settings'),
       ])
 
       setStats(statsRes.data)
       setRecentTransactions(transactionsRes.data)
       setChartData(chartRes.data)
+      setTargetAmount(parseFloat(settingsRes.data.target_amount) || 0)
     } catch (error) {
       toast.error('Gagal memuat data dashboard')
     } finally {
       setLoading(false)
     }
   }
+
+  const progressPercentage = targetAmount > 0 
+    ? Math.min((stats.totalBalance / targetAmount) * 100, 100)
+    : 0
 
   if (loading) {
     return (
@@ -98,6 +105,59 @@ export default function Dashboard() {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
+
+      {/* Target Progress Bar */}
+      {targetAmount > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Progress Target Kas</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Target: {formatCurrency(targetAmount)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                {progressPercentage.toFixed(1)}%
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {formatCurrency(stats.totalBalance)} / {formatCurrency(targetAmount)}
+              </p>
+            </div>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="relative w-full h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${
+                progressPercentage >= 100 
+                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                  : progressPercentage >= 75
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600'
+                  : progressPercentage >= 50
+                  ? 'bg-gradient-to-r from-yellow-500 to-yellow-600'
+                  : 'bg-gradient-to-r from-red-500 to-red-600'
+              }`}
+              style={{ width: `${progressPercentage}%` }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+            </div>
+          </div>
+          
+          {/* Status Message */}
+          <p className="text-sm text-center mt-3 text-gray-600 dark:text-gray-400">
+            {progressPercentage >= 100 
+              ? '🎉 Target sudah tercapai!' 
+              : progressPercentage >= 75
+              ? '💪 Hampir mencapai target!'
+              : progressPercentage >= 50
+              ? '📈 Setengah jalan menuju target'
+              : progressPercentage >= 25
+              ? '🚀 Terus semangat mengumpulkan!'
+              : '💵 Ayo mulai mengumpulkan kas!'}
+          </p>
+        </div>
+      )}
               <p className="text-gray-600 dark:text-gray-400 text-sm">Pemasukan</p>
               <h3 className="text-2xl font-bold mt-1 text-green-600">
                 {formatCurrency(stats.totalIncome)}

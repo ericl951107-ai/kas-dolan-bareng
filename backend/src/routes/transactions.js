@@ -7,7 +7,7 @@ const router = express.Router()
 // Get all transactions
 router.get('/', auth, async (req, res) => {
   try {
-    const { type, startDate, endDate } = req.query
+    const { type, startDate, endDate, userId } = req.query
     let query = `
       SELECT t.*, u.name as user_name, u.nickname
       FROM transactions t
@@ -15,6 +15,11 @@ router.get('/', auth, async (req, res) => {
       WHERE t.status = 'completed'
     `
     const params = []
+    
+    if (userId) {
+      params.push(userId)
+      query += ` AND t.user_id = $${params.length}`
+    }
     
     if (type && type !== 'all') {
       params.push(type)

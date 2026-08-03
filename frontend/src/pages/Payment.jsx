@@ -176,33 +176,7 @@ export default function Payment() {
             <label className="block text-sm font-medium mb-2">
               Metode Pembayaran
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button
-                onClick={() => setPaymentMethod('qris')}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  paymentMethod === 'qris'
-                    ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
-                      <FiCreditCard className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">QRIS</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Scan & bayar
-                      </p>
-                    </div>
-                  </div>
-                  {paymentMethod === 'qris' && (
-                    <FiCheck className="w-5 h-5 text-primary-600" />
-                  )}
-                </div>
-              </button>
-
+            <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => setPaymentMethod('transfer')}
                 className={`p-4 rounded-lg border-2 transition-all ${
@@ -233,70 +207,19 @@ export default function Payment() {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            {paymentMethod === 'qris' ? (
-              <button
-                onClick={handleGenerateQR}
-                disabled={loading}
-                className="btn-primary flex-1"
-              >
-                {loading ? 'Memproses...' : 'Buat QR Code'}
-              </button>
-            ) : (
-              <button
-                onClick={handleDirectPayment}
-                disabled={loading}
-                className="btn-primary flex-1"
-              >
-                {loading ? 'Memproses...' : 'Lanjutkan Pembayaran'}
-              </button>
-            )}
+            <button
+              onClick={handleDirectPayment}
+              disabled={loading}
+              className="btn-primary flex-1"
+            >
+              {loading ? 'Memproses...' : 'Lanjutkan Pembayaran'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* QR Code Display */}
-      {qrData && (
-        <div className="card text-center animate-slide-up">
-          <h3 className="text-lg font-semibold mb-4">QR Code Pembayaran</h3>
-          
-          <div ref={qrRef} className="inline-block p-6 bg-white rounded-lg">
-            <QRCodeSVG
-              value={qrData.qrString}
-              size={256}
-              level="H"
-              includeMargin={true}
-            />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                {user?.name}
-              </p>
-              <p className="text-lg font-bold text-primary-600 mt-1">
-                {formatCurrency(parseFloat(amount))}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                ID: {qrData.transactionId}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleDownloadQR}
-            className="btn-secondary mt-4 inline-flex items-center gap-2"
-          >
-            <FiDownload />
-            Unduh QR Code
-          </button>
-
-          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <p className="text-sm text-blue-800 dark:text-blue-300">
-              Scan QR code dengan aplikasi pembayaran digital Anda (GoPay, OVO, Dana, dll)
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Transfer Info */}
-      {paymentMethod === 'transfer' && !loading && (
+      {/* Transfer Info - Always show */}
+      {!loading && amount && (
         <div className="card animate-slide-up">
           <h3 className="text-lg font-semibold mb-4">Informasi Transfer</h3>
           

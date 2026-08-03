@@ -12,7 +12,8 @@ function Settings() {
   const [settings, setSettings] = useState({
     bank_account_number: '',
     bank_name: '',
-    account_holder_name: ''
+    account_holder_name: '',
+    target_amount: '0'
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -144,6 +145,32 @@ function Settings() {
               placeholder="Contoh: Kas Dolan Bareng"
               required
             />
+          </div>
+
+          <div className="pt-4 border-t">
+            <h3 className="text-md font-semibold text-gray-800 mb-4">Target Kas</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Target Uang (Opsional)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  Rp
+                </span>
+                <input
+                  type="number"
+                  name="target_amount"
+                  value={settings.target_amount}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Target uang yang ingin dikumpulkan. Akan ditampilkan di dashboard sebagai progress bar.
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

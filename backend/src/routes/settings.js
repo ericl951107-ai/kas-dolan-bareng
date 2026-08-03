@@ -33,7 +33,15 @@ router.get('/', auth, async (req, res) => {
         INSERT INTO settings (key, value, description) VALUES
         ('bank_account_number', '1234567890', 'Nomor rekening untuk pembayaran'),
         ('bank_name', 'Bank BCA', 'Nama bank'),
-        ('account_holder_name', 'Kas Dolan Bareng', 'Nama pemilik rekening')
+        ('account_holder_name', 'Kas Dolan Bareng', 'Nama pemilik rekening'),
+        ('target_amount', '0', 'Target uang yang ingin dikumpulkan')
+      `);
+    } else {
+      // Ensure target_amount exists
+      await pool.query(`
+        INSERT INTO settings (key, value, description) 
+        VALUES ('target_amount', '0', 'Target uang yang ingin dikumpulkan')
+        ON CONFLICT (key) DO NOTHING
       `);
     }
     
@@ -54,7 +62,7 @@ router.get('/', auth, async (req, res) => {
 
 // Update settings (admin only)
 router.put('/', auth, adminAuth, async (req, res) => {
-  const { bank_account_number, bank_name, account_holder_name } = req.body;
+  const { bank_account_number, bank_name, account_holder_name, target_amount } = req.body;
   
   try {
     // Update bank account number
@@ -78,6 +86,14 @@ router.put('/', auth, adminAuth, async (req, res) => {
       await pool.query(
         'UPDATE settings SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = $2',
         [account_holder_name, 'account_holder_name']
+      );
+    }
+    
+    // Update target amount
+    if (target_amount !== undefined) {
+      await pool.query(
+        'UPDATE settings SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = $2',
+        [target_amount.toString(), 'target_amount']
       );
     }
     
