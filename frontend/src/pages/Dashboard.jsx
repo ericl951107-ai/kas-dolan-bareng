@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { 
   FiDollarSign, FiUsers, FiTrendingUp, FiTrendingDown,
-  FiArrowRight, FiClock
+  FiArrowRight, FiClock, FiTarget
 } from 'react-icons/fi'
 import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts'
 import api from '../utils/api'
-import { formatCurrency, formatDateTime, formatRelativeTime } from '../utils/formatters'
+import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
 const COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b']
@@ -21,7 +21,7 @@ export default function Dashboard() {
     totalIncome: 0,
     totalExpenses: 0,
   })
-  const [targetAmount, setTargetAmount] = useState(0)
+  const [targets, setTargets] = useState([])
   const [recentTransactions, setRecentTransactions] = useState([])
   const [chartData, setChartData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,27 +32,31 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [statsRes, transactionsRes, chartRes, settingsRes] = await Promise.all([
+      const [statsRes, transactionsRes, chartRes, targetsRes] = await Promise.all([
         api.get('/dashboard/stats'),
         api.get('/transactions/recent?limit=5'),
         api.get('/dashboard/chart-data'),
-        api.get('/settings'),
+        api.get('/targets'),
       ])
 
       setStats(statsRes.data)
       setRecentTransactions(transactionsRes.data)
       setChartData(chartRes.data)
-      setTargetAmount(parseFloat(settingsRes.data.target_amount) || 0)
+      setTargets(targetsRes.data.filter(t => t.status === 'active'))
     } catch (error) {
+      console.error('Dashboard error:', error)
       toast.error('Gagal memuat data dashboard')
     } finally {
       setLoading(false)
     }
   }
 
-  const progressPercentage = targetAmount > 0 
-    ? Math.min((stats.totalBalance / targetAmount) * 100, 100)
-    : 0
+  const getProgressColor = (pct) => {
+    if (pct >= 100) return 'bg-green-500'
+    if (pct >= 75) return 'bg-blue-500'
+    if (pct >= 50) return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
 
   if (loading) {
     return (
@@ -66,12 +70,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Dashboard
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Ringkasan kas dan aktivitas terbaru
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">Ringkasan kas dan aktivitas terbaru</p>
       </div>
 
       {/* Stats Cards */}
@@ -80,9 +80,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-primary-100 text-sm">Total Saldo</p>
-              <h3 className="text-2xl font-bold mt-1">
-                {formatCurrency(stats.totalBalance)}
-              </h3>
+              <h3 className="text-2xl font-bold mt-1">{formatCurrency(stats.totalBalance)}</h3>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
               <FiDollarSign className="w-6 h-6" />
@@ -105,63 +103,8 @@ export default function Dashboard() {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-
-      {/* Target Progress Bar */}
-      {targetAmount > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold">Progress Target Kas</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Target: {formatCurrency(targetAmount)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                {progressPercentage.toFixed(1)}%
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {formatCurrency(stats.totalBalance)} / {formatCurrency(targetAmount)}
-              </p>
-            </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="relative w-full h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${
-                progressPercentage >= 100 
-                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
-                  : progressPercentage >= 75
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600'
-                  : progressPercentage >= 50
-                  ? 'bg-gradient-to-r from-yellow-500 to-yellow-600'
-                  : 'bg-gradient-to-r from-red-500 to-red-600'
-              }`}
-              style={{ width: `${progressPercentage}%` }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-            </div>
-          </div>
-          
-          {/* Status Message */}
-          <p className="text-sm text-center mt-3 text-gray-600 dark:text-gray-400">
-            {progressPercentage >= 100 
-              ? '🎉 Target sudah tercapai!' 
-              : progressPercentage >= 75
-              ? '💪 Hampir mencapai target!'
-              : progressPercentage >= 50
-              ? '📈 Setengah jalan menuju target'
-              : progressPercentage >= 25
-              ? '🚀 Terus semangat mengumpulkan!'
-              : '💵 Ayo mulai mengumpulkan kas!'}
-          </p>
-        </div>
-      )}
               <p className="text-gray-600 dark:text-gray-400 text-sm">Pemasukan</p>
-              <h3 className="text-2xl font-bold mt-1 text-green-600">
-                {formatCurrency(stats.totalIncome)}
-              </h3>
+              <h3 className="text-2xl font-bold mt-1 text-green-600">{formatCurrency(stats.totalIncome)}</h3>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
               <FiTrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -173,9 +116,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 dark:text-gray-400 text-sm">Pengeluaran</p>
-              <h3 className="text-2xl font-bold mt-1 text-red-600">
-                {formatCurrency(stats.totalExpenses)}
-              </h3>
+              <h3 className="text-2xl font-bold mt-1 text-red-600">{formatCurrency(stats.totalExpenses)}</h3>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
               <FiTrendingDown className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -184,59 +125,90 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Target Goals Progress */}
+      {targets.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <FiTarget className="w-5 h-5 text-primary-600" />
+              Target Kas Aktif
+            </h3>
+            <Link to="/targets" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
+              Lihat Semua <FiArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {targets.map((target) => {
+              const collected = parseFloat(target.total_collected || 0)
+              const total = parseFloat(target.target_amount)
+              const pct = total > 0 ? Math.min((collected / total) * 100, 100) : 0
+              return (
+                <div key={target.id}>
+                  <div className="flex justify-between items-center mb-1">
+                    <div>
+                      <span className="font-medium">{target.title}</span>
+                      {parseFloat(target.per_person_amount) > 0 && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                          per orang: {formatCurrency(parseFloat(target.per_person_amount))}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-sm">{pct.toFixed(1)}%</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatCurrency(collected)} / {formatCurrency(total)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${getProgressColor(pct)}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  {target.deadline && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Deadline: {formatDate(target.deadline)}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Line Chart */}
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">Tren Kas (7 Hari Terakhir)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value) => formatCurrency(value)}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px'
-                }}
-              />
+              <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+              <Tooltip formatter={(value) => formatCurrency(value)} />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="income" 
-                stroke="#22c55e" 
-                name="Pemasukan"
-                strokeWidth={2}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="expenses" 
-                stroke="#ef4444" 
-                name="Pengeluaran"
-                strokeWidth={2}
-              />
+              <Line type="monotone" dataKey="income" stroke="#22c55e" name="Pemasukan" strokeWidth={2} />
+              <Line type="monotone" dataKey="expenses" stroke="#ef4444" name="Pengeluaran" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Pie Chart */}
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">Perbandingan Kas</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={[
-                  { name: 'Pemasukan', value: stats.totalIncome },
-                  { name: 'Pengeluaran', value: stats.totalExpenses },
+                  { name: 'Pemasukan', value: stats.totalIncome || 0 },
+                  { name: 'Pengeluaran', value: stats.totalExpenses || 0 },
                 ]}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 outerRadius={100}
-                fill="#8884d8"
                 dataKey="value"
               >
                 {[0, 1].map((index) => (
@@ -253,12 +225,8 @@ export default function Dashboard() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Transaksi Terbaru</h3>
-          <Link 
-            to="/history" 
-            className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
-          >
-            Lihat Semua
-            <FiArrowRight />
+          <Link to="/history" className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1">
+            Lihat Semua <FiArrowRight />
           </Link>
         </div>
 
@@ -269,27 +237,26 @@ export default function Dashboard() {
         ) : (
           <div className="space-y-3">
             {recentTransactions.map((transaction) => (
-              <div 
+              <div
                 key={transaction.id}
-                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    transaction.type === 'income' 
-                      ? 'bg-green-100 dark:bg-green-900/30' 
+                    transaction.type === 'income'
+                      ? 'bg-green-100 dark:bg-green-900/30'
                       : 'bg-red-100 dark:bg-red-900/30'
                   }`}>
-                    {transaction.type === 'income' ? (
-                      <FiTrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    ) : (
-                      <FiTrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    )}
+                    {transaction.type === 'income'
+                      ? <FiTrendingUp className="w-5 h-5 text-green-600" />
+                      : <FiTrendingDown className="w-5 h-5 text-red-600" />
+                    }
                   </div>
                   <div>
-                    <p className="font-medium">{transaction.description}</p>
+                    <p className="font-medium">{transaction.description || 'Iuran Kas'}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <FiClock className="w-3 h-3" />
-                      {formatRelativeTime(transaction.createdAt)}
+                      {formatRelativeTime(transaction.created_at)}
                     </p>
                   </div>
                 </div>
@@ -298,11 +265,9 @@ export default function Dashboard() {
                     transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {transaction.type === 'income' ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
+                    {formatCurrency(parseFloat(transaction.amount))}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {transaction.userName}
-                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{transaction.user_name}</p>
                 </div>
               </div>
             ))}

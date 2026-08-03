@@ -1,6 +1,9 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { runMigrations } from './config/database.js'
 import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import memberRoutes from './routes/members.js'
@@ -10,13 +13,16 @@ import expenseRoutes from './routes/expenses.js'
 import dashboardRoutes from './routes/dashboard.js'
 import statisticsRoutes from './routes/statistics.js'
 import settingsRoutes from './routes/settings.js'
+import targetsRoutes from './routes/targets.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// CORS configuration
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
@@ -24,11 +30,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
-// Middleware
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
-// Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/members', memberRoutes)
@@ -38,21 +43,21 @@ app.use('/api/expenses', expenseRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/statistics', statisticsRoutes)
 app.use('/api/settings', settingsRoutes)
+app.use('/api/targets', targetsRoutes)
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' })
 })
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: err.message || 'Internal Server Error'
   })
 })
 
-app.listen(PORT, () => {
+// Start server and run migrations
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`)
+  await runMigrations()
 })

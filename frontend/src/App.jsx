@@ -6,6 +6,7 @@ import { useThemeStore } from './store/themeStore'
 // Pages
 import Login from './pages/Login'
 import Register from './pages/Register'
+import VerifyEmail from './pages/VerifyEmail'
 import Dashboard from './pages/Dashboard'
 import Members from './pages/Members'
 import MemberDetail from './pages/MemberDetail'
@@ -15,6 +16,8 @@ import Expenses from './pages/Expenses'
 import Statistics from './pages/Statistics'
 import Settings from './pages/Settings'
 import Profile from './pages/Profile'
+import PendingApprovals from './pages/PendingApprovals'
+import Targets from './pages/Targets'
 
 // Components
 import Layout from './components/Layout'
@@ -39,6 +42,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
@@ -50,6 +54,8 @@ function App() {
             <Route path="statistics" element={<Statistics />} />
             <Route path="settings" element={<Settings />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="approvals" element={<PendingApprovals />} />
+            <Route path="targets" element={<Targets />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

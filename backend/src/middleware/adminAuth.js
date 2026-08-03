@@ -1,15 +1,23 @@
+// Admin only middleware
 const adminAuth = (req, res, next) => {
-  // Check if user is authenticated
   if (!req.user) {
-    return res.status(401).json({ message: 'Tidak terautentikasi' });
+    return res.status(401).json({ message: 'Tidak terautentikasi' })
   }
-
-  // Check if user is admin
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Akses ditolak. Hanya admin yang bisa mengakses fitur ini.' });
+    return res.status(403).json({ message: 'Akses ditolak. Hanya admin.' })
   }
+  next()
+}
 
-  next();
-};
+// Admin or Bendahara middleware
+export const adminOrBendaharaAuth = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Tidak terautentikasi' })
+  }
+  if (req.user.role !== 'admin' && req.user.role !== 'bendahara') {
+    return res.status(403).json({ message: 'Akses ditolak. Hanya admin/bendahara.' })
+  }
+  next()
+}
 
-export default adminAuth;
+export default adminAuth

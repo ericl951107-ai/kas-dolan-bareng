@@ -24,19 +24,24 @@ export default function Register() {
     }
 
     setLoading(true)
-
     try {
-      await api.post('/auth/register', {
+      const response = await api.post('/auth/register', {
         name: formData.name,
         nickname: formData.nickname,
         email: formData.email,
         password: formData.password,
       })
       
-      toast.success('Pendaftaran berhasil! Silakan login.')
-      navigate('/login')
+      toast.success('Kode verifikasi dikirim ke email Anda!')
+      // Redirect to verify page with email
+      navigate('/verify-email', { state: { email: formData.email } })
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Pendaftaran gagal')
+      const data = error.response?.data
+      if (data?.needVerification) {
+        navigate('/verify-email', { state: { email: formData.email } })
+      } else {
+        toast.error(data?.message || 'Pendaftaran gagal')
+      }
     } finally {
       setLoading(false)
     }

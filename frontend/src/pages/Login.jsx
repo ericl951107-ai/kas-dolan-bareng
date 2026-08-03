@@ -21,12 +21,17 @@ export default function Login() {
     try {
       const response = await api.post('/auth/login', formData)
       const { user, token } = response.data
-      
       login(user, token)
       toast.success('Login berhasil!')
       navigate('/')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login gagal')
+      const data = error.response?.data
+      if (data?.needVerification) {
+        toast.error('Email belum diverifikasi. Kode telah dikirim ulang.')
+        navigate('/verify-email', { state: { email: formData.email } })
+      } else {
+        toast.error(data?.message || 'Login gagal')
+      }
     } finally {
       setLoading(false)
     }

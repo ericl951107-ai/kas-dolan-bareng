@@ -4,10 +4,20 @@ import { useAuthStore } from '../store/authStore'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'
+
 export default function Header({ onMenuClick }) {
   const { isDark, toggleTheme } = useThemeStore()
   const { user } = useAuthStore()
   const [showNotifications, setShowNotifications] = useState(false)
+
+  const getAvatarSrc = () => {
+    if (!user?.avatar) return null
+    if (user.avatar.startsWith('http')) return user.avatar
+    return `${API_BASE}${user.avatar}`
+  }
+
+  const avatarSrc = getAvatarSrc()
 
   return (
     <header className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
@@ -59,10 +69,10 @@ export default function Header({ onMenuClick }) {
               to="/profile"
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              {user?.avatar ? (
+              {avatarSrc ? (
                 <img
-                  src={user.avatar}
-                  alt={user.name}
+                  src={avatarSrc}
+                  alt={user?.name}
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
