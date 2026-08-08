@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FiUpload, FiX, FiImage } from 'react-icons/fi';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
@@ -9,11 +10,15 @@ function Settings() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingQris, setUploadingQris] = useState(false);
+  const [qrisFile, setQrisFile] = useState(null);
+  const [qrisPreview, setQrisPreview] = useState(null);
   const [settings, setSettings] = useState({
     bank_account_number: '',
     bank_name: '',
     account_holder_name: '',
-    target_amount: '0'
+    target_amount: '0',
+    qris_image_url: ''
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -32,6 +37,9 @@ function Settings() {
       setLoading(true);
       const response = await api.get('/settings');
       setSettings(response.data);
+      if (response.data.qris_image_url) {
+        setQrisPreview(`${import.meta.env.VITE_API_URL}${response.data.qris_image_url}`);
+      }
     } catch (error) {
       console.error('Error fetching settings:', error);
       toast.error('Gagal memuat pengaturan');
@@ -71,6 +79,66 @@ function Settings() {
       ...settings,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleQrisFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Ukuran file maksimal 5MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast.error('Hanya file gambar yang diperbolehkan');
+        return;
+      }
+
+      setQrisFile(file);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setQrisPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveQris = () => {
+    setQrisFile(null);
+    setQrisPreview(null);
+  };
+
+  const handleUploadQris = async () => {
+    if (!qrisFile) {
+      toast.error('Pilih file QRIS terlebih dahulu');
+      return;
+    }
+
+    setUploadingQris(true);
+    try {
+      const formData = new FormData();
+      formData.append('qris', qrisFile);
+
+      const response = await api.post('/settings/qris', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      toast.success(response.data.message);
+      setSettings({
+        ...settings,
+        qris_image_url: response.data.qrisUrl
+      });
+      setQrisFile(null);
+      
+      await fetchSettings();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Gagal upload QRIS');
+    } finally {
+      setUploadingQris(false);
+    }
   };
 
   if (loading) {
@@ -171,6 +239,63 @@ function Settings() {
                 Target uang yang ingin dikumpulkan. Akan ditampilkan di dashboard sebagai progress bar.
               </p>
             </div>
+          </div>
+
+          <div className="pt-4 border-t">
+            <h3 className="text-md font-semibold text-gray-800 mb-4">Upload QRIS</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload foto QRIS statis dari bank/e-wallet Anda untuk pembayaran
+            </p>
+            
+            {!qrisPreview ? (
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer"
+                onClick={() => document.getElementById('qris-upload').click()}
+              >
+                <FiUpload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600 mb-1">
+                  Klik untuk upload gambar QRIS
+                </p>
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, GIF (Max 5MB)
+                </p>
+                <input
+                  id="qris-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleQrisFileChange}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="relative inline-block">
+                  <img 
+                    src={qrisPreview} 
+                    alt="QRIS Preview" 
+                    className="w-64 h-64 object-contain rounded-lg border-2 border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveQris}
+                    className="absolute -top-2 -right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                  >
+                    <FiX className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {qrisFile && (
+                  <button
+                    type="button"
+                    onClick={handleUploadQris}
+                    disabled={uploadingQris}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {uploadingQris ? 'Mengupload...' : 'Simpan QRIS'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

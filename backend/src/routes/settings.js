@@ -2,8 +2,41 @@ import express from 'express';
 import pool from '../config/database.js';
 import { auth } from '../middleware/auth.js';
 import adminAuth from '../middleware/adminAuth.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
+
+// Configure multer for QRIS image upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/qris';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, 'qris-' + Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Hanya file gambar yang diperbolehkan'));
+    }
+  }
+});
 
 // Get all settings
 router.get('/', auth, async (req, res) => {
@@ -34,13 +67,16 @@ router.get('/', auth, async (req, res) => {
         ('bank_account_number', '1234567890', 'Nomor rekening untuk pembayaran'),
         ('bank_name', 'Bank BCA', 'Nama bank'),
         ('account_holder_name', 'Kas Dolan Bareng', 'Nama pemilik rekening'),
-        ('target_amount', '0', 'Target uang yang ingin dikumpulkan')
+        ('target_amount', '0', 'Target uang yang ingin dikumpulkan'),
+        ('qris_image_url', '', 'URL gambar QRIS untuk pembayaran')
       `);
     } else {
-      // Ensure target_amount exists
+      // Ensure target_amount and qris_image_url exist
       await pool.query(`
         INSERT INTO settings (key, value, description) 
-        VALUES ('target_amount', '0', 'Target uang yang ingin dikumpulkan')
+        VALUES 
+          ('target_amount', '0', 'Target uang yang ingin dikumpulkan'),
+          ('qris_image_url', '', 'URL gambar QRIS untuk pembayaran')
         ON CONFLICT (key) DO NOTHING
       `);
     }
@@ -106,6 +142,37 @@ router.put('/', auth, adminAuth, async (req, res) => {
     res.json({ message: 'Pengaturan berhasil diperbarui' });
   } catch (error) {
     console.error('Error updating settings:', error);
+    res.status(500).json({ message: 'Terjadi kesalahan server' });
+  }
+});
+
+// Upload QRIS image (admin only)
+router.post('/qris', auth, adminAuth, upload.single('qris'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'File QRIS tidak ditemukan' });
+    }
+
+    const qrisUrl = `/uploads/qris/${req.file.filename}`;
+    
+    // Update QRIS URL in database
+    await pool.query(
+      'UPDATE settings SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = $2',
+      [qrisUrl, 'qris_image_url']
+    );
+
+    // Log activity
+    await pool.query(
+      'INSERT INTO activity_logs (user_id, action, entity_type, details) VALUES ($1, $2, $3, $4)',
+      [req.user.id, 'upload_qris', 'settings', JSON.stringify({ filename: req.file.filename })]
+    );
+
+    res.json({ 
+      message: 'QRIS berhasil diupload',
+      qrisUrl
+    });
+  } catch (error) {
+    console.error('Error uploading QRIS:', error);
     res.status(500).json({ message: 'Terjadi kesalahan server' });
   }
 });

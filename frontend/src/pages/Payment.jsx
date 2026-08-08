@@ -13,7 +13,8 @@ export default function Payment() {
   const [bankSettings, setBankSettings] = useState({
     bank_name: 'BCA',
     bank_account_number: '1234567890',
-    account_holder_name: 'Bendahara Kas'
+    account_holder_name: 'Bendahara Kas',
+    qris_image_url: ''
   })
 
   useEffect(() => {
@@ -26,7 +27,8 @@ export default function Payment() {
       setBankSettings({
         bank_name: response.data.bank_name || 'BCA',
         bank_account_number: response.data.bank_account_number || '1234567890',
-        account_holder_name: response.data.account_holder_name || 'Bendahara Kas'
+        account_holder_name: response.data.account_holder_name || 'Bendahara Kas',
+        qris_image_url: response.data.qris_image_url || ''
       })
     } catch (error) {
       console.error('Failed to fetch bank settings:', error)
@@ -127,6 +129,23 @@ export default function Payment() {
             <span className="font-semibold">{bankSettings.account_holder_name}</span>
           </div>
         </div>
+
+        {/* QRIS Display */}
+        {bankSettings.qris_image_url && (
+          <div className="mt-6">
+            <h4 className="text-md font-semibold mb-3">📱 Scan QRIS</h4>
+            <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <img 
+                src={`${import.meta.env.VITE_API_URL}${bankSettings.qris_image_url}`}
+                alt="QRIS Code" 
+                className="w-full max-w-xs mx-auto rounded-lg shadow-lg"
+              />
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
+                Scan dengan aplikasi e-wallet (Dana, Gopay, OVO, dll)
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Payment Form */}
